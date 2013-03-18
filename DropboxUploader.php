@@ -132,28 +132,24 @@ class DropboxUploader {
     }
 
     public function uploadString($string, $remoteName, $remoteDir = '/') {
-        $exception = NULL;
+        $handle = tmpfile();
 
-        $file = tempnam(sys_get_temp_dir(), 'DBUploadString');
-        if (!is_file($file))
+        if ($handle === FALSE)
             throw new Exception("Can not create temporary file.", self::CODE_TEMP_FILE_CREATE_ERROR);
 
-        $bytes = file_put_contents($file, $string);
+        $meta = stream_get_meta_data($handle);
+        if ($meta === FALSE)
+            throw new Exception("Can not acquire filename of temporary file.", self::CODE_TEMP_FILE_CREATE_ERROR);
+
+        $file = $meta['uri'];
+
+        $bytes = fwrite($handle, $string);
         if ($bytes === FALSE) {
             unlink($file);
             throw new Exception("Can not write to temporary file '$file'.", self::CODE_TEMP_FILE_WRITE_ERROR);
         }
 
-        try {
-            $this->upload($file, $remoteDir, $remoteName);
-        } catch (Exception $exception) {
-            # intentionally left blank
-        }
-
-        unlink($file);
-
-        if ($exception)
-            throw $exception;
+        $this->upload($file, $remoteDir, $remoteName);
     }
 
     protected function login() {

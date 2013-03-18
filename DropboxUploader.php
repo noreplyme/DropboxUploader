@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  *
  * @author Jaka Jancar [jaka@kubje.org] [http://jaka.kubje.org/]
- * @version 1.1.12
+ * @version 1.1.12-upload-retry
  */
 class DropboxUploader {
     /**
@@ -63,6 +63,7 @@ class DropboxUploader {
     protected $caCertSource;
     protected $loggedIn = FALSE;
     protected $cookies = array();
+    protected $retry = array('source' => NULL);
 
     /**
      * Constructor
@@ -84,6 +85,20 @@ class DropboxUploader {
         $this->password = $password;
     }
 
+    public function retry() {
+        if (!isset($this->retry['source']))
+            throw new Exception('Nothing to retry, upload first.', self::CODE_PARAMETER_TYPE_ERROR);
+
+        $this->upload($this->retry['source'], $this->retry['remoteDir'], $this->retry['remoteName']);
+    }
+
+    /**
+     * @return array float microtime-stamps of the last upload tries
+     */
+    public function getRetries() {
+        return isset($this->retry['tries']) ? $this->retry['tries'] : array();
+    }
+
     public function setCaCertificateDir($dir) {
         $this->caCertSourceType = self::CACERT_SOURCE_DIR;
         $this->caCertSource     = $dir;
@@ -95,6 +110,13 @@ class DropboxUploader {
     }
 
     public function upload($source, $remoteDir = '/', $remoteName = NULL) {
+        if ($this->retry['source'] !== $source) {
+            $this->retry['tries']      = array();
+            $this->retry['source']     = $source;
+            $this->retry['remoteDir']  = $remoteDir;
+            $this->retry['remoteName'] = $remoteName;
+        }
+
         if (!is_file($source) or !is_readable($source))
             throw new Exception("File '$source' does not exist or is not readable.", self::CODE_FILE_READ_ERROR);
 
@@ -116,6 +138,8 @@ class DropboxUploader {
 
         if (!$this->loggedIn)
             $this->login();
+
+        $this->retry['tries'][] = microtime(TRUE);
 
         $data  = $this->request(self::HTTPS_DROPBOX_COM_HOME);
         $token = $this->extractToken($data, self::HTTPS_DROPBOX_COM_UPLOAD);

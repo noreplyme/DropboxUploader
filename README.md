@@ -48,3 +48,36 @@ DropboxUploader to it (before calling the *upload()* method):
     $uploader->setCaCertificateFile("path/to/the/certificate.cer");
 
 [cert]: http://curl.haxx.se/ca/cacert.pem
+
+Developing
+----------
+
+Dropbox Uploader is developed both under Unixoide and Windows systems. If you are developing under Windows I recommend
+you install [Git][git], keep it updated and use the *git bash*.
+
+[git]: http://git-scm.com/downloads
+
+## Branching
+
+Development is done against [hakre/DropboxUploader][development], the *development*
+branch. Create yourself a new branch tracking from it and name it for every non-trivial changes you want to introduce.
+
+Changes are then taken from feature branches into *development* and then into *master*.
+
+[development]: https://github.com/hakre/DropboxUploader
+
+## Testsuite
+
+Dropbox Uploader comes with a Phpunit testsuite located in the `tests` folder.
+
+To get the testsuite configured, copy `phpunit.xml.dist` to `phpunit.xml` and modify the Dropbox email and password
+credentials and other configuration if needed.
+
+If you want to use any of these settings from the commandline, set an environment variable with
+the same name. Environment variables have a higher priority than the the XML configuration;
+
+    $ export Dropbox_Credential_Password=your-password-goes-here
+
+You can then invoke the testsuite from the projects root directory:
+
+    $ vendor/bin/phpunit tests

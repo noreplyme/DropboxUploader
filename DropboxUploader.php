@@ -1,6 +1,6 @@
 <?php
 /**
- * Dropbox Uploader
+ * Dropbox Uploader (Mod by Andrew)
  *
  * Copyright (c) 2009 Jaka Jancar
  *
@@ -60,6 +60,7 @@ final class DropboxUploader {
     const CODE_CURL_EXTENSION_MISSING = 0x10080101;
     private $email;
     private $password;
+    public  $sessionpatch;
     private $caCertSourceType = self::CACERT_SOURCE_SYSTEM;
     private $caCertSource;
     private $loggedIn = FALSE;
@@ -72,7 +73,7 @@ final class DropboxUploader {
      * @param string $password
      * @throws Exception
      */
-    public function __construct($email, $password) {
+    public function __construct($email, $password, $sessionPatch) {
         // Check requirements
         if (!extension_loaded('curl'))
             throw new Exception('DropboxUploader requires the cURL extension.', self::CODE_CURL_EXTENSION_MISSING);
@@ -83,6 +84,12 @@ final class DropboxUploader {
 
         $this->email    = $email;
         $this->password = $password;
+        $this->sessionpatch = $sessionPatch;
+		
+		if (file_exists($this->sessionpatch)) {
+			$this->cookies = json_decode(file_get_contents($this->sessionpatch), true);
+			$this->loggedIn = TRUE;
+		}
     }
 
     public function setCaCertificateDir($dir) {
@@ -130,8 +137,10 @@ final class DropboxUploader {
         );
 
         $data     = $this->request(self::HTTPS_DROPBOX_COM_UPLOAD, $postData);
-        if (strpos($data, 'HTTP/1.1 302 FOUND') === FALSE)
-            throw new Exception('Upload failed!', self::CODE_UPLOAD_ERROR);
+        if (strpos($data, 'HTTP/1.1 302 FOUND') === FALSE) {
+        	$this->request(self::HTTPS_DROPBOX_COM_HOME);
+			//throw new Exception('Upload failed!', self::CODE_UPLOAD_ERROR);
+		} else return true;
     }
 
     private function curlFileCreate($source, $remoteName) {
@@ -227,6 +236,10 @@ final class DropboxUploader {
         preg_match_all('/Set-Cookie: ([^=]+)=(.*?);/i', $data, $matches, PREG_SET_ORDER);
         foreach ($matches as $match)
             $this->cookies[$match[1]] = $match[2];
+        
+		if ($url == 'https://www.dropbox.com/login') {
+			file_put_contents($this->sessionpatch, json_encode($this->cookies));
+		}
 
         return $data;
     }
